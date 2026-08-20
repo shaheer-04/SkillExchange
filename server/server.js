@@ -1,9 +1,7 @@
 /**
  * server.js
  * Configures Express (middleware, routes, error handling), connects to
- * MongoDB and starts the HTTP server.
- *
- * All real logic lives in routes -> controllers -> models.
+ * MongoDB, and handles serverless requests on Vercel.
  */
 
 require('dotenv').config();
@@ -24,13 +22,6 @@ const app = express();
 
 /* --------------------------- Core middleware --------------------------- */
 
-// CLIENT_URL can hold one origin or a comma separated list.
-// If it is not set we allow every origin, which is convenient in development.
-const allowedOrigins = (process.env.CLIENT_URL || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
-
 app.use(
   cors({
     origin: "https://skill-exchange-frontend-lyart.vercel.app",
@@ -40,6 +31,19 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+/* -------------------- Serverless DB Connection ------------------------ */
+
+// Ensures MongoDB connects before processing any incoming route on Vercel
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database Connection Error:', err.message);
+    res.status(500).json({ message: 'Database connection failed' });
+  }
+});
 
 /* ------------------------------- Routes -------------------------------- */
 
@@ -62,24 +66,12 @@ app.use(errorHandler);
 
 /* ------------------------------- Startup ------------------------------- */
 
-const PORT = process.env.PORT || 5000;
-
-async function start() {
-  try {
-    await connectDB();
-    app.listen(PORT, () => {
-      console.log(`SkillExchange API running on http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error('Failed to start the server:', err.message);
-    process.exit(1);
-  }
-}
-
-// Only start listening when this file is run directly (`npm start`).
-// When it is imported by the test suite the tests start the server themselves.
+// Run local server only when running locally directly (`node server.js`)
 if (require.main === module) {
-  start();
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`SkillExchange API running on http://localhost:${PORT}`);
+  });
 }
 
 module.exports = app;
