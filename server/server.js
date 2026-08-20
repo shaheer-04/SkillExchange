@@ -33,8 +33,8 @@ const allowedOrigins = (process.env.CLIENT_URL || '')
 
 app.use(
   cors({
-    origin: allowedOrigins.length ? allowedOrigins : true,
-    credentials: false,
+    origin: "https://skill-exchange-frontend-lyart.vercel.app",
+    credentials: true,
   })
 );
 
